@@ -1,5 +1,8 @@
 Revision history for Perl extension Algorithm::Permute.
 
+0.04  Mar 6 2002
+	- Fixed cross-compiler compatibility problem in the callback hack, by Robin
+
 0.03  Sep 5 2001
 	- Added callback interface by Robin Houston
 	- Fixed bogus benchmark

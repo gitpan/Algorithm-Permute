@@ -1,6 +1,6 @@
 #   Permute.pm
 #
-#   Copyright (c) 1999,2000,2001 Edwin Pratomo
+#   Copyright (c) 1999 - 2002 Edwin Pratomo
 #
 #   You may distribute under the terms of either the GNU General Public
 #   License or the Artistic License, as specified in the Perl README file,
@@ -23,7 +23,7 @@ require AutoLoader;
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
 
-$VERSION = '0.03';
+$VERSION = '0.04';
 
 bootstrap Algorithm::Permute $VERSION;
 
@@ -194,7 +194,7 @@ October 3, 1999 - Alpha release, version 0.01
 
 =head1 AUTHOR
 
-Edwin Pratomo, I<ed.pratomo@computer.org>. The object oriented interface is
+Edwin Pratomo, I<edpratomo@cpan.org>. The object oriented interface is
 taken from Tom Phoenix's C<List::Permutor>. Robin Houston
 <robin@kitsite.com> invented and contributed the callback style interface. 
 
