@@ -1,14 +1,25 @@
+/* 
+   Permute.xs
+
+   Copyright (c) 1999,2000  Edwin Pratomo
+
+   You may distribute under the terms of either the GNU General Public
+   License or the Artistic License, as specified in the Perl README file,
+   with the exception that it cannot be placed on a CD-ROM or similar media
+   for commercial distribution without the prior approval of the author.
+
+*/
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 #include "EXTERN.h"
 #include "perl.h"
 #include "XSUB.h"
+#include <stdio.h>
 #ifdef __cplusplus
 }
 #endif
-
-#include <stdio.h>
 
 #ifdef TRUE
     #undef TRUE
@@ -24,117 +35,139 @@ extern "C" {
 typedef unsigned int  UINT;
 typedef unsigned long ULONG;
 
-ULONG factorial(UINT n)
-{
-    UINT i;
-    ULONG res = 1;
-    if (n <= 1)
-        return 1;
-    else {
-        for (i = 1; i <=n; i++)
-            res *= i;
-        return res;
-    }
-}
+typedef struct {
+    bool is_done;
+    SV **items;
+    UINT *loc;
+    UINT *p;
+    IV num;
+} Permute;
 
-void next(int n, SV **p, UINT *loc, int *pdone)
+/* private _next */
+void _next(int n, UINT *p, UINT *loc, bool *is_done)
 {   
     int i;
-    SV *tmp;
     if (n > 1)
         if (loc[n] < n)
         {
-            tmp = newSVsv(p[loc[n]]);
-            sv_setsv(p[loc[n]], p[loc[n] + 1]);
-            sv_setsv(p[loc[n] + 1], tmp); /* n */
+            p[loc[n]] = p[loc[n] + 1];
+            p[loc[n] + 1] = n;
             loc[n] = loc[n] + 1;
         }
         else
         {
-            next(n - 1, p, loc, pdone);
-            tmp = newSVsv(p[loc[n]]);
+            _next(n - 1, p, loc, is_done);
             for (i = n - 1; i >= 1; i--)
-                sv_setsv(p[i + 1], p[i]);
-            sv_setsv(p[1], tmp);
+                p[i + 1] = p[i];
+            p[1] = n;
             loc[n] = 1;
         }
     else
-        *pdone = TRUE;
+        *is_done = TRUE;
 }
 
 MODULE = Algorithm::Permute     PACKAGE = Algorithm::Permute        
 PROTOTYPES: DISABLE
 
-void
-permute(av)
+Permute* 
+new(CLASS, av)
+    char *CLASS
     AV *av
     PREINIT:
-    UINT spaces, *loc;
-    SV **p;
-    int done = FALSE;
-    IV i, num;
-    UINT j;
-
-    PPCODE:
-    if ((num = av_len(av) + 1) == 0) 
-        XSRETURN_UNDEF;
-
-    if ((p = (SV**) safemalloc(sizeof(SV*) * (num + 1))) == NULL)
-        XSRETURN_UNDEF;
-    if ((loc = (UINT*) safemalloc(sizeof(UINT) * (num + 1))) == NULL)
-        XSRETURN_UNDEF;
-
-    spaces = factorial(num);
-    EXTEND(sp, spaces);
-
-    for (i = 1; i <= num; i++) {
-        p[i] = av_pop(av);
-        loc[i] = 1;     
-    }
-
-    while (!done)
-    {
-        PUSHs(newRV_noinc(sv_2mortal((SV*)av_make(num, p + 1))));
-        next(num, p, loc, &done);
-    }
-	safefree(p);
-	safefree(loc);
-
-
-AV*
-permute_ref(av)
-    AV *av
-    PREINIT:
-    UINT spaces, *loc;
-    SV **p;
-    int done = FALSE;
     IV i, num;
     UINT j;
 
     CODE:
+    RETVAL = (Permute*) safemalloc(sizeof(Permute));
+    if (RETVAL == NULL) {
+        warn("Unable to create an instance of Algorithm::Permute");
+        XSRETURN_UNDEF;
+    }
+
+    RETVAL->is_done = FALSE;
     if ((num = av_len(av) + 1) == 0) 
         XSRETURN_UNDEF;
 
-    if ((p = (SV**) safemalloc(sizeof(SV*) * (num + 1))) == NULL)
+    if ((RETVAL->items = (SV**) safemalloc(sizeof(SV*) * (num + 1))) == NULL)
         XSRETURN_UNDEF;
-    if ((loc = (UINT*) safemalloc(sizeof(UINT) * (num + 1))) == NULL)
+    if ((RETVAL->p = (UINT*) safemalloc(sizeof(UINT) * (num + 1))) == NULL)
+        XSRETURN_UNDEF;
+    if ((RETVAL->loc = (UINT*) safemalloc(sizeof(UINT) * (num + 1))) == NULL)
         XSRETURN_UNDEF;
 
-    spaces = factorial(num);
-    EXTEND(sp, spaces);
+    RETVAL->num = num;
 
     for (i = 1; i <= num; i++) {
-        p[i] = av_pop(av);
-        loc[i] = 1;     
+        *(RETVAL->items + i) = av_shift(av);
+        *(RETVAL->p + i) = num - i + 1;
+        *(RETVAL->loc + i) = 1;     
     }
-    RETVAL = newAV();
-    while (!done)
-    {
-        av_push(RETVAL, newRV_noinc((SV*)av_make(num, p + 1)));
-        next(num, p, loc, &done);
-    }
-	safefree(p);
-	safefree(loc);
 
     OUTPUT:
     RETVAL
+
+void
+next(self)
+    Permute *self
+
+    PREINIT:
+    IV n;
+    IV i;
+    SV *tmp;
+
+    PPCODE:
+    if (self->is_done) 
+        XSRETURN_EMPTY;
+    else {
+        EXTEND(sp, self->num);  
+        for (i = 1; i <= self->num; i++) {
+            PUSHs(sv_2mortal(newSVsv(*(self->items + *(self->p + i)))));
+        }
+        n = self->num;
+        if (*(self->loc + n) < n)
+        {
+            *(self->p + *(self->loc + n)) = *(self->p + *(self->loc + n) + 1);
+            *(self->p + *(self->loc + n) + 1) = n;
+            *(self->loc + n) = *(self->loc + n) + 1;
+        }
+        else
+        {
+            _next(n - 1, self->p, self->loc, &(self->is_done));
+            for (i = n - 1; i >= 1; i--)
+                *(self->p + i + 1) = *(self->p + i);
+            *(self->p + 1) = n;
+            *(self->loc + n) = 1;
+        }
+    }
+
+void
+DESTROY(self)
+    Permute *self
+    CODE:
+    safefree(self->p); /* must free elements first? */
+    safefree(self->loc); 
+    safefree(self);
+
+void 
+peek(self)
+    Permute *self
+    PREINIT:
+    int i;
+    PPCODE: 
+    if (self->is_done) 
+        XSRETURN_EMPTY;
+    EXTEND(sp, self->num);
+    for (i = 1; i <= self->num; i++)
+        PUSHs(sv_2mortal(newSVsv(*(self->items + *(self->p + i)))));
+
+void
+reset(self)
+    Permute *self
+    PREINIT:
+    int i;
+    CODE:
+    self->is_done = FALSE;
+    for (i = 1; i <= self->num; i++) {
+        *(self->p + i) = self->num - i + 1;
+        *(self->loc + i) = 1;     
+    }

@@ -1,6 +1,10 @@
 Changes
-MANIFEST
 Makefile.PL
+MANIFEST
 Permute.pm
 Permute.xs
 test.pl
+typemap
+bench/t
+bench/8result.txt
+bench/9result.txt

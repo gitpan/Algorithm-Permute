@@ -6,9 +6,11 @@
 # Change 1..1 below to 1..last_test_to_print .
 # (It may become useful if the test is moved to ./t subdirectory.)
 
-BEGIN { $| = 1; print "1..1\n"; }
+BEGIN { $| = 1; print "1..16\n"; }
 END {print "not ok 1\n" unless $loaded;}
-use Algorithm::Permute qw(permute permute_ref);
+@correct = ("3 2 1", "2 3 1", "2 1 3", "3 1 2", "1 3 2", "1 2 3");
+
+use Algorithm::Permute;
 $loaded = 1;
 print "ok 1\n";
 
@@ -18,7 +20,26 @@ print "ok 1\n";
 # (correspondingly "not ok 13") depending on the success of chunk 13
 # of the test code):
 
-@res = permute([1..3]);
-print scalar(@res) == 6 ? "ok 2" : "not ok 2", "\n";
-$res_ref = permute_ref(['a'..'d']);
-print scalar(@$res_ref) == 24 ? "ok 3" : "not ok 3", "\n";
+$perm = Algorithm::Permute->new([1..3]);
+print ( $perm ? "ok 2\n" : "not ok 2\n");
+
+# peek..
+@peek = $perm->peek;
+print "# @peek.\nnot " unless "@peek" eq $correct[0];
+print "ok 3\n";
+
+# next..
+while (@res = $perm->next) {
+	print "# @res.\nnot " unless "@res" eq $correct[$cnt++];
+	print ("ok ". ($cnt + 3) . "\n");
+}
+
+# reset..
+$cnt = 0;
+$perm->reset;
+while (@res = $perm->next) {
+	print "# @res.\nnot " unless "@res" eq $correct[$cnt++];
+	print "ok ". ($cnt + 9) . "\n";
+}
+
+print $cnt == 6 ? "ok 16\n" : "not ok 16\n";

@@ -1,0 +1,6 @@
+Benchmark: timing 5 iterations of Abigail's, Algorithm::Permute, List::Permutor, MJD's, perlfaq4...
+ Abigail's: 14 wallclock secs (13.21 usr +  0.49 sys = 13.70 CPU)
+Algorithm::Permute:  3 wallclock secs ( 2.96 usr +  0.02 sys =  2.98 CPU)
+List::Permutor:  9 wallclock secs ( 8.98 usr +  0.02 sys =  9.00 CPU)
+     MJD's: 56 wallclock secs (55.54 usr +  0.18 sys = 55.72 CPU)
+  perlfaq4: 65 wallclock secs (64.71 usr +  0.22 sys = 64.93 CPU)
