@@ -1,0 +1,20 @@
+TYPEMAP
+
+UINT	T_IV
+AV *        T_AvRV
+
+OUTPUT
+
+T_AvRV
+    $arg = newRV((SV*)$var);
+
+INPUT
+
+T_AvRV
+    if( SvROK($arg) && (SvTYPE(SvRV($arg)) == SVt_PVAV) )
+        $var = (AV*)SvRV( $arg );
+    else {
+        warn( \"${Package}::$func_name() -- $var is not an AV reference\" );
+        XSRETURN_UNDEF;
+    }
+

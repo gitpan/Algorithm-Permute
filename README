@@ -1,0 +1,44 @@
+NAME
+    Algorithm::Permute - Perl extension for easy and fast
+    permutation
+
+SYNOPSIS
+      use Algorithm::Permute qw(permute permute_ref);
+      
+      @result = permute([1..4]);
+      for (@result) {
+              print join(', ', @$_), "\n";
+      }
+
+    or:
+
+      $result_ref = permute_ref(['a'..'e']);
+      for (@$result_ref) {
+              print join(', ', @$_), "\n";
+      }
+
+DESCRIPTION
+    This module makes performing permutation in Perl easy and fast,
+    although perhaps its algorithm is not the fastest on the earth.
+    Currently it only supports permutation n of n objects.
+
+    Two functions are available to be imported into the caller's
+    namespace: `permute()' and `permute_ref()'. Both functions take
+    a reference to an array as the argument. `permute()' returns an
+    array containing anonymous arrays, `permute_ref()' returns a
+    reference to an array.
+
+HISTORY
+    * October 3, 1999 - Alpha release, version 0.01
+
+AUTHOR
+    Edwin Pratomo, *ed.pratomo@computer.org*
+
+ACKNOWLEDGEMENT
+    Yustina Sri Suharini - my fiance, for providing the permutation
+    problem to me.
+
+SEE ALSO
+    * Data Structures, Algorithms, and Program Style Using C - 
+    Korsh and Garrett
+    * Algorithms from P to NP, Vol. I - Moret and Shapiro

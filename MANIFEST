@@ -1,0 +1,6 @@
+Changes
+MANIFEST
+Makefile.PL
+Permute.pm
+Permute.xs
+test.pl
