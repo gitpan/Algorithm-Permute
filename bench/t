@@ -2,32 +2,32 @@
 
 use blib;
 use Benchmark;
-use Algorithm::Permute;
-use List::Permutor;								# Tom Phoenix's
-require '/home/edwin/docs/majalah/2/mjd_permute';	# MJD's
-require '/home/edwin/docs/majalah/2/Permutations.pm';	# Abigail's
+use Algorithm::Permute qw(permute);
+use List::Permutor;                             # Tom Phoenix's
+require './mjd_permute';    # MJD's
+require './Permutations.pm';    # Abigail's
 
-my @arr = (1..9);
+my @arr = (1..8);
 
 $p = new Algorithm::Permute([@arr]);
 $l = new List::Permutor (@arr);
 
 #permute([split], []);
-sub permute{
-	my @items = @{ $_[0] };
-	my @perms = @{ $_[1] };
-	unless (@items) {
-#		print "@perms\n";
-		@res = @perms;
-	} else {
-		my(@newitems,@newperms,$i);
-		foreach $i (0 .. $#items) {
-			@newitems = @items;
-    		@newperms = @perms;
-    		unshift(@newperms, splice(@newitems, $i, 1));
-    		permute([@newitems], [@newperms]);
-    	}
-	}
+sub faq_permute{
+    my @items = @{ $_[0] };
+    my @perms = @{ $_[1] };
+    unless (@items) {
+#       print "@perms\n";
+        @res = @perms;
+    } else {
+        my(@newitems,@newperms,$i);
+        foreach $i (0 .. $#items) {
+            @newitems = @items;
+            @newperms = @perms;
+            unshift(@newperms, splice(@newitems, $i, 1));
+            faq_permute([@newitems], [@newperms]);
+        }
+    }
 }
 
 sub mjd_permute {
@@ -40,10 +40,11 @@ sub mjd_permute {
 }
 
 timethese(5, {
-#	'Abigail\'s'	=> sub { 
-#		@res = Combinatorial::Permutations::permutate(@arr) },
-	'MJD\'s'	=> sub { mjd_permute(@arr) },
-	'perlfaq4'	=> sub { permute([@arr], []) },
-	'Algorithm::Permute' => sub { while (@res = $p->next) {} },
-	'List::Permutor'		 => sub { while (@res = $l->next) {} },
-	});
+   'Abigail\'s'    => sub { 
+       @res = Combinatorial::Permutations::permutate(@arr) },
+    'MJD\'s'    => sub { mjd_permute(@arr) },
+    'perlfaq4'  => sub { faq_permute([@arr], []) },
+    'Algorithm::Permute' => sub { while (@res = $p->next) {}; $p->reset },
+    'List::Permutor'         => sub { while (@res = $l->next) {}; $l->reset },
+    'Algorithm::Permute qw(permute)' => sub { permute { @res = @arr } @arr },
+    });

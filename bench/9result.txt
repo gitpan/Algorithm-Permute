@@ -1,5 +1,6 @@
-Benchmark: timing 5 iterations of Algorithm::Permute, List::Permutor, MJD's, perlfaq4...
-Algorithm::Permute: 14 wallclock secs (14.13 usr +  0.07 sys = 14.20 CPU)
-List::Permutor: 67 wallclock secs (65.78 usr +  0.47 sys = 66.25 CPU)
-     MJD's: 530 wallclock secs (516.57 usr +  2.10 sys = 518.67 CPU)
-  perlfaq4: 498 wallclock secs (490.49 usr +  1.65 sys = 492.14 CPU)
+Benchmark: timing 5 iterations of Algorithm::Permute, Algorithm::Permute qw(permute), List::Permutor, MJD's, perlfaq4...
+Algorithm::Permute: 43 wallclock secs (42.93 usr +  0.04 sys = 42.97 CPU)
+Algorithm::Permute qw(permute): 15 wallclock secs (14.82 usr +  0.00 sys = 14.82 CPU)
+List::Permutor: 227 wallclock secs (226.46 usr +  0.22 sys = 226.68 CPU)
+     MJD's: 307 wallclock secs (306.69 usr +  0.43 sys = 307.12 CPU)
+  perlfaq4: 272 wallclock secs (271.93 usr +  0.33 sys = 272.26 CPU)

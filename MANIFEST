@@ -8,3 +8,5 @@ typemap
 bench/t
 bench/8result.txt
 bench/9result.txt
+bench/Permutations.pm
+bench/mjd_permute
