@@ -1,3 +1,4 @@
+# $Id: test.pl,v 1.6 2003/05/26 08:35:39 edwin Exp $
 # Before `make install' is performed this script should be runnable with
 # `make test'. After `make install' it should work as `perl test.pl'
 
@@ -6,7 +7,7 @@
 # Change 1..1 below to 1..last_test_to_print .
 # (It may become useful if the test is moved to ./t subdirectory.)
 
-BEGIN { $| = 1; print "1..23\n"; }
+BEGIN { $| = 1; print "1..27\n"; }
 END {print "not ok 1\n" unless $loaded;}
 @correct = ("3 2 1", "2 3 1", "2 1 3", "3 1 2", "1 3 2", "1 2 3");
 
@@ -30,16 +31,16 @@ print "ok 3\n";
 
 # next..
 while (@res = $perm->next) {
-	print "# @res.\nnot " unless "@res" eq $correct[$cnt++];
-	print ("ok ". ($cnt + 3) . "\n");
+    print "# @res.\nnot " unless "@res" eq $correct[$cnt++];
+    print ("ok ". ($cnt + 3) . "\n");
 }
 
 # reset..
 $cnt = 0;
 $perm->reset;
 while (@res = $perm->next) {
-	print "# @res.\nnot " unless "@res" eq $correct[$cnt++];
-	print "ok ". ($cnt + 9) . "\n";
+    print "# @res.\nnot " unless "@res" eq $correct[$cnt++];
+    print "ok ". ($cnt + 9) . "\n";
 }
 
 print $cnt == 6 ? "ok 16\n" : "not ok 16\n";
@@ -70,16 +71,68 @@ permute { $_ = "@array" } @array;
 print (TieTest->c() == 600 ? "ok 21\n" : "not ok 21\t# ".TieTest->c()."\n");
 
 untie @array;
+
+##########################################
+# test eval block outside of permute block
+{
+    my @array = (1..2);
+    $i = 0;
+    eval {
+        permute {
+            die if (++$i > 1 )
+        } @array;
+    };
+    print "ok 22\n";
+    eval { @array = (1..2); };                                      # try to change the array after die()
+    print $@ ? 'not ' : '', "ok 23\n";
+}
+
+######################################
+# test eval block inside permute block
 @array = (qw/a r s e/);
 $i = 0;
 permute {eval {goto foo}; ++$i } @array;
 if ($@ =~ /^Can't "goto" out/) {
-    print "ok 22\n";
+    print "ok 24\n";
 } else {
-    foo: print "not ok 22\t# $@\n";
+    foo: print "not ok 24\t# $@\n";
 }
+print ($i == 24 ? "ok 25\n" : "not ok 25\n");
 
-print ($i == 24 ? "ok 23\n" : "not ok 23\n");
+
+######################
+# test for memory leak
+
+$^O !~ /linux/ || !$ENV{MEMORY_TEST} and do {
+    for (26..27) { print "skipping $_: memory leak test\n" }
+    exit 0;
+};
+
+for ($i = 0;  $i < 10000;  $i++) {
+    $perm->reset;
+    while (@res = $perm->next) { }
+    if ($i == 0) {
+        $ok = check_mem(1);     # initialize
+    }
+    elsif ($i % 100  ==  99) {
+        !$ok or $ok = check_mem();
+    }
+}
+print $ok ? '' : 'not ', "ok 26\n";
+
+for ($i = 0;  $i < 10000;  $i++) {
+    @array = ('A'..'E');
+    permute { } @array;
+
+    if ($i == 0) {
+        $ok = check_mem(1);     # initialize
+    }
+    elsif ($i % 100  ==  99) {
+        !$ok or $ok = check_mem();
+    }
+}
+print $ok ? '' : 'not ', "ok 27\n";
+
 
 my $c;
 package TieTest;
@@ -87,3 +140,34 @@ sub TIEARRAY  {bless []}
 sub FETCHSIZE {5}
 sub FETCH     { ++$c; $_[1]}
 sub c         {$c}
+
+package main;
+sub check_mem {
+    my $initialise = shift;
+    # Log Memory Usage
+    local $^W;
+    my %mem;
+    if (open(FH, "/proc/self/status")) {
+        my $units;
+        while (<FH>) {
+            if (/^VmSize.*?(\d+)\W*(\w+)$/) {
+                $mem{Total} = $1;
+                $units = $2;
+            }
+            if (/^VmRSS:.*?(\d+)/) {
+                $mem{Resident} = $1;
+            }
+        }
+        close FH;
+
+        if ($TOTALMEM != $mem{Total}) {
+            warn("LEAK! : ", $mem{Total} - $TOTALMEM, " $units\n") unless $initialise;
+            $TOTALMEM = $mem{Total};
+            return $initialise ? 1 : 0;
+        }
+
+        print("# Mem Total: $mem{Total} $units, Resident: $mem{Resident} $units\n");
+        return 1;
+    }
+}
+

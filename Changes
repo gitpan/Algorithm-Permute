@@ -1,5 +1,11 @@
 Revision history for Perl extension Algorithm::Permute.
 
+0.06  May 28 2003
+    - Fix a memory leak in permute()
+    - Fix bug #2596 : Perl context stack manip done in safer way in permute()
+    - array passed to permute() not marked as R/O. see test #23 for reason
+    - test.pl extended with eval and mem leak tests
+
 0.05  May 16 2003
 	- Added -DPERL_EXT to legalise use of perl-5.9.0's cxinc
 	- Uses PAD_SET_CUR macro when defined, this fixes problem with invalid pad in 5.9.0
