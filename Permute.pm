@@ -1,6 +1,6 @@
 #   Permute.pm
 #
-#   Copyright (c) 1999 - 2002 Edwin Pratomo
+#   Copyright (c) 1999 - 2003 Edwin Pratomo
 #
 #   You may distribute under the terms of either the GNU General Public
 #   License or the Artistic License, as specified in the Perl README file,
@@ -23,7 +23,7 @@ require AutoLoader;
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
 
-$VERSION = '0.04';
+$VERSION = '0.05';
 
 bootstrap Algorithm::Permute $VERSION;
 

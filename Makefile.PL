@@ -5,6 +5,6 @@ WriteMakefile(
     'NAME'	=> 'Algorithm::Permute',
     'VERSION_FROM' => 'Permute.pm', # finds $VERSION
     'LIBS'	=> [''],   # e.g., '-lm' 
-    'DEFINE'	=> '',     # e.g., '-DHAVE_SOMETHING' 
+    'DEFINE'	=> '-DPERL_EXT',     # e.g., '-DHAVE_SOMETHING' 
     'INC'	=> '',     # e.g., '-I/usr/include/other' 
 );

@@ -10,3 +10,4 @@ bench/8result.txt
 bench/9result.txt
 bench/Permutations.pm
 bench/mjd_permute
+META.yml                                Module meta-data in YAML

@@ -1,7 +1,7 @@
 /* 
    Permute.xs
 
-   Copyright (c) 1999 - 2002  Edwin Pratomo
+   Copyright (c) 1999 - 2003  Edwin Pratomo
 
    You may distribute under the terms of either the GNU General Public
    License or the Artistic License, as specified in the Perl README file,
@@ -308,8 +308,12 @@ SV* array_sv;
     /* Set up the context for the callback */
     SAVESPTR(CvROOT(callback)->op_ppaddr);
     CvROOT(callback)->op_ppaddr = PL_ppaddr[OP_NULL];  /* Zap the OP_LEAVESUB */
-    SAVESPTR(PL_curpad);
-    PL_curpad = AvARRAY((AV*)AvARRAY(CvPADLIST(callback))[1]);
+#ifdef PAD_SET_CUR
+   	PAD_SET_CUR(CvPADLIST(callback),1);
+#else
+   	SAVESPTR(PL_curpad);
+   	PL_curpad = AvARRAY((AV*)AvARRAY(CvPADLIST(callback))[1]);
+#endif
     SAVETMPS;
     SAVESPTR(PL_op);
 

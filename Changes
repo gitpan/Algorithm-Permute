@@ -1,5 +1,9 @@
 Revision history for Perl extension Algorithm::Permute.
 
+0.05  May 16 2003
+	- Added -DPERL_EXT to legalise use of perl-5.9.0's cxinc
+	- Uses PAD_SET_CUR macro when defined, this fixes problem with invalid pad in 5.9.0
+
 0.04  Mar 6 2002
 	- Fixed cross-compiler compatibility problem in the callback hack, by Robin
 
