@@ -1,6 +1,6 @@
 #   Permute.pm
 #
-#   Copyright (c) 1999 - 2003 Edwin Pratomo
+#   Copyright (c) 1999 - 2007 Edwin Pratomo
 #
 #   You may distribute under the terms of either the GNU General Public
 #   License or the Artistic License, as specified in the Perl README file,
@@ -23,7 +23,7 @@ require AutoLoader;
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
 
-$VERSION = '0.06';
+$VERSION = '0.07';
 
 bootstrap Algorithm::Permute $VERSION;
 
@@ -128,21 +128,21 @@ and do some simple benchmark. The whole result is the following.
 
 Permutation of B<eight> scalars:
 
- Abigail's:  9 wallclock secs ( 8.07 usr +  0.30 sys =  8.37 CPU)
-Algorithm::Permute:  5 wallclock secs ( 5.72 usr +  0.00 sys =  5.72 CPU)
-Algorithm::Permute qw(permute):  2 wallclock secs ( 1.65 usr +  0.00 sys =  1.65 CPU)
-List::Permutor: 27 wallclock secs (26.73 usr +  0.01 sys = 26.74 CPU)
-     MJD's: 32 wallclock secs (32.55 usr +  0.02 sys = 32.57 CPU)
-  perlfaq4: 36 wallclock secs (35.27 usr +  0.02 sys = 35.29 CPU)
+  Abigail's                     :  9 wallclock secs ( 8.07 usr +  0.30 sys =  8.37 CPU)
+  Algorithm::Permute            :  5 wallclock secs ( 5.72 usr +  0.00 sys =  5.72 CPU)
+  Algorithm::Permute qw(permute):  2 wallclock secs ( 1.65 usr +  0.00 sys =  1.65 CPU)
+  List::Permutor                : 27 wallclock secs (26.73 usr +  0.01 sys = 26.74 CPU)
+  Memoization                   : 32 wallclock secs (32.55 usr +  0.02 sys = 32.57 CPU)
+  perlfaq4                      : 36 wallclock secs (35.27 usr +  0.02 sys = 35.29 CPU)
 
 Permutation of B<nine> scalars (the Abigail's routine is commented out, because
 it stores all of the result in memory, swallows all of my machine's memory):
 
- Algorithm::Permute: 43 wallclock secs (42.93 usr +  0.04 sys = 42.97 CPU)
- Algorithm::Permute qw(permute): 15 wallclock secs (14.82 usr +  0.00 sys = 14.82 CPU)
- List::Permutor: 227 wallclock secs (226.46 usr +  0.22 sys = 226.68 CPU)
-     MJD's: 307 wallclock secs (306.69 usr +  0.43 sys = 307.12 CPU)
-  perlfaq4: 272 wallclock secs (271.93 usr +  0.33 sys = 272.26 CPU)
+  Algorithm::Permute            :  43 wallclock secs ( 42.93 usr +  0.04 sys = 42.97 CPU)
+  Algorithm::Permute qw(permute):  15 wallclock secs ( 14.82 usr +  0.00 sys = 14.82 CPU)
+  List::Permutor                : 227 wallclock secs (226.46 usr +  0.22 sys = 226.68 CPU)
+  Memoization                   : 307 wallclock secs (306.69 usr +  0.43 sys = 307.12 CPU)
+  perlfaq4                      : 272 wallclock secs (271.93 usr +  0.33 sys = 272.26 CPU)
 
 The benchmark script is included in the bench directory. I understand that 
 speed is not everything. So here is the list of URLs of the alternatives, in 
@@ -152,9 +152,8 @@ case you hate this module.
 
 =item * 
 
-Mark Jason Dominus' technique is discussed in chapter 4 Perl Cookbook, so you 
-can get it from O'Reilly: 
-ftp://ftp.oreilly.com/published/oreilly/perl/cookbook
+Memoization is discussed in chapter 4 Perl Cookbook, so you can get it from
+O'Reilly: ftp://ftp.oreilly.com/published/oreilly/perl/cookbook
 
 =item *
 
@@ -170,38 +169,18 @@ The classic way, usually used by Lisp hackers: perldoc perlfaq4
 
 =back
 
-=head1 HISTORY
-
-=over 4
-
-=item * 
-
-September 5, 2001 - version 0.03. A callback style interface, which is very
-fast, is added. 
-
-=item *
-
-September 2, 2000 - version 0.02. Major interface changes, now using object
-oriented interface similar to C<List::Permutor>'s. More efficient memory 
-usage. Internal tweaking gives speed improvement - the list elements are no 
-longer swapped, but only the indexes.
-
-=item *
-
-October 3, 1999 - Alpha release, version 0.01 
-
-=back
-
 =head1 AUTHOR
 
-Edwin Pratomo, I<edpratomo@cpan.org>. The object oriented interface is
-taken from Tom Phoenix's C<List::Permutor>. Robin Houston
-<robin@kitsite.com> invented and contributed the callback style interface. 
+Edwin Pratomo, I<edpratomo@cpan.org>. 
+
+The object oriented interface is taken from Tom Phoenix's C<List::Permutor>.
+Robin Houston <robin@kitsite.com> invented and contributed the callback
+style interface.
 
 =head1 ACKNOWLEDGEMENT
 
-Yustina Sri Suharini - my fiance, for providing the permutation problem to
-me. 
+Yustina Sri Suharini - my ex-fiance-now-wife, for providing the permutation
+problem to me.
 
 =head1 SEE ALSO
 

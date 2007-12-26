@@ -1,7 +1,7 @@
 /* 
    Permute.xs
 
-   Copyright (c) 1999 - 2003  Edwin Pratomo
+   Copyright (c) 1999 - 2007  Edwin Pratomo
 
    You may distribute under the terms of either the GNU General Public
    License or the Artistic License, as specified in the Perl README file,
@@ -71,8 +71,11 @@ my_cxinc(pTHX)
  * So it was technically illegal, but GCC is decent enough to accept it
  * anyway. Unfortunately other compilers are not usually so forgiving...
  */
-#define AvARRAY_set(av, val) ((XPVAV*)  SvANY(av))->xav_array = (char*) val
-
+#if PERL_VERSION >= 9
+#  define AvARRAY_set(av, val) ((av)->sv_u.svu_array) = val
+#else
+#  define AvARRAY_set(av, val) ((XPVAV*)  SvANY(av))->xav_array = (char*) val
+#endif
 
 typedef unsigned int  UINT;
 typedef unsigned long ULONG;
