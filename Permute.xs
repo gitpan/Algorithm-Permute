@@ -111,7 +111,8 @@ void _next(int n, UINT *p, UINT *loc, bool *is_done)
         *is_done = TRUE;
 }
 
-/* from Robin Houston <robin@kitsite.com> */
+/* permute_engine() and afp_destructor() are from Robin Houston
+ * <robin@kitsite.com> */
 void permute_engine(
 AV* av, 
 SV** array, 
@@ -144,6 +145,36 @@ I32 len, SV*** tmparea, OP* callback)
 	} while (index-- > 0);
 }
 
+struct afp_cache {
+    SV***         tmparea;
+    AV*           array;
+    I32           len;
+    SV**          array_array;
+    U32           array_flags;
+    SSize_t       array_fill;
+    SV**          copy;          /* Non-magical SV list for magical array */
+};
+
+static
+void afp_destructor(void *cache)
+{
+    struct afp_cache *c = cache;
+    I32               x;
+    
+    /* PerlIO_stdoutf("DESTROY!\n"); */
+
+    for (x = c->len; x >= 0; x--) free(c->tmparea[x]);
+    free(c->tmparea);
+    if (c->copy) {
+        for (x = 0; x < c->len; x++) SvREFCNT_dec(c->copy[x]);
+        free(c->copy);
+    }
+    
+    AvARRAY_set(c->array, c->array_array);
+    SvFLAGS(c->array) = c->array_flags;
+    AvFILLp(c->array) = c->array_fill;
+    free(c);
+}
 
 MODULE = Algorithm::Permute     PACKAGE = Algorithm::Permute        
 PROTOTYPES: DISABLE
@@ -154,7 +185,6 @@ new(CLASS, av)
     AV *av
     PREINIT:
     IV i, num;
-    UINT j;
 
     CODE:
     RETVAL = (Permute*) safemalloc(sizeof(Permute));
@@ -192,7 +222,6 @@ next(self)
     PREINIT:
     IV n;
     IV i;
-    SV *tmp;
 
     PPCODE:
     if (self->is_done) 
@@ -257,19 +286,14 @@ SV* callback_sv;
 SV* array_sv;
   PROTOTYPE: &\@
   PREINIT:
-    AV*           array;
     CV*           callback;
 	GV*			  agv;
     I32           x;
-    I32           len;
-    SV***         tmparea;
-    SV**          array_array;
-    U32           array_flags;
-    SSize_t       array_fill;
-    SV**          copy = 0;  /* Non-magical SV list for magical array */
     PERL_CONTEXT* cx;
     I32           gimme = G_VOID;  /* We call our callback in VOID context */
+
     bool          old_catch;
+    struct afp_cache *c;
 	I32 hasargs = 0;
 	SV** newsp;
   PPCODE:
@@ -279,43 +303,47 @@ SV* array_sv;
     if (!SvROK(array_sv)    || SvTYPE(SvRV(array_sv))    != SVt_PVAV)
         Perl_croak(aTHX_ "Array is not an ARRAY reference");
     
+    c = malloc(sizeof(struct afp_cache));
     callback = (CV*)SvRV(callback_sv);
-    array    = (AV*)SvRV(array_sv);
-    len      = 1 + av_len(array);
+    c->array    = (AV*)SvRV(array_sv);
+    c->len      = 1 + av_len(c->array);
     
 	agv = gv_fetchpv("A", TRUE, SVt_PVAV);
 	SAVESPTR(GvSV(agv));
 
-    if (SvREADONLY(array))
+    if (SvREADONLY(c->array))
         Perl_croak(aTHX_ "Can't permute a read-only array");
-    
-    if (len == 0) {
+
+    if (c->len == 0) {
         /* Should we warn here? */
+        free(c);
         return;
     }
     
-    array_array = AvARRAY(array);
-    array_flags = SvFLAGS(array);
-    array_fill  = AvFILLp(array);
+    c->array_array = AvARRAY(c->array);
+    c->array_flags = SvFLAGS(c->array);
+    c->array_fill  = AvFILLp(c->array);
 
     /* Magical array. Realise it temporarily. */
-    if (SvRMAGICAL(array)) {
-        copy = (SV**) malloc (len * sizeof *copy);
-        for (x=0; x < len; x++) {
-            SV **svp = av_fetch(array, x, FALSE);
-            copy[x] = (svp) ? SvREFCNT_inc(*svp) : &PL_sv_undef;
+    if (SvRMAGICAL(c->array)) {
+        c->copy = (SV**) malloc (c->len * sizeof *(c->copy));
+        for (x = 0; x < c->len; x++) {
+            SV **svp = av_fetch(c->array, x, FALSE);
+            c->copy[x] = (svp) ? SvREFCNT_inc(*svp) : &PL_sv_undef;
         }
-        SvRMAGICAL_off(array);
-        AvARRAY_set(array, copy);
-        AvFILLp(array) = len - 1;
+        SvRMAGICAL_off(c->array);
+        AvARRAY_set(c->array, c->copy);
+        AvFILLp(c->array) = c->len - 1;
+    } else {
+        c->copy = 0;
     }
     
-    /* SvREADONLY_on(array); Can't change the array during permute */ 
+    SvREADONLY_on(c->array); /* Can't change the array during permute */ 
     
     /* Allocate memory for the engine to scribble on */   
-    tmparea = (SV***) malloc( (len+1) * sizeof *tmparea);
-    for (x = len; x >= 0; x--)
-        tmparea[x]  = malloc(len * sizeof **tmparea);
+    c->tmparea = (SV***) malloc((c->len + 1) * sizeof *(c->tmparea));
+    for (x = c->len; x >= 0; x--)
+        c->tmparea[x]  = malloc(c->len * sizeof **(c->tmparea));
     
     /* Set up the context for the callback */
     SAVESPTR(CvROOT(callback)->op_ppaddr);
@@ -334,20 +362,11 @@ SV* array_sv;
 
     old_catch = CATCH_GET;
     CATCH_SET(TRUE);
+    save_destructor(afp_destructor, c);
     
-    permute_engine(array, AvARRAY(array), 0, len, tmparea, CvSTART(callback));
+    permute_engine(c->array, AvARRAY(c->array), 0, c->len, 
+        c->tmparea, CvSTART(callback));
     
 	POPBLOCK(cx,PL_curpm);
     CATCH_SET(old_catch);
-   
-    for (x = len; x >= 0; x--) free(tmparea[x]);
-    free(tmparea);
-    if (copy) {
-        for (x=0; x < len; x++) SvREFCNT_dec(copy[x]);
-        free(copy);
-    }
-    
-    AvARRAY_set(array, array_array);
-    SvFLAGS(array) = array_flags;
-    AvFILLp(array) = array_fill;
 }

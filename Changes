@@ -1,7 +1,11 @@
 Revision history for Perl extension Algorithm::Permute.
 
+0.08  Dec 27 2007
+    - Make test #23 work correctly (srezic reported crashes on 
+      amd64-freebsd-6.2)
+
 0.07  Dec 26 2007
-    - Make it work with perl-5.10.0
+    - Make it work with perl-5.10.0 (RT ticket #27022)
 
 0.06  May 28 2003
     - Fixed a memory leak in permute()
