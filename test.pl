@@ -1,4 +1,3 @@
-# $Id: test.pl,v 1.6 2003/05/26 08:35:39 edwin Exp $
 # Before `make install' is performed this script should be runnable with
 # `make test'. After `make install' it should work as `perl test.pl'
 
@@ -7,7 +6,7 @@
 # Change 1..1 below to 1..last_test_to_print .
 # (It may become useful if the test is moved to ./t subdirectory.)
 
-BEGIN { $| = 1; print "1..27\n"; }
+BEGIN { $| = 1; print "1..32\n"; }
 END {print "not ok 1\n" unless $loaded;}
 @correct = ("3 2 1", "2 3 1", "2 1 3", "3 1 2", "1 3 2", "1 2 3");
 
@@ -99,15 +98,33 @@ if ($@ =~ /^Can't "goto" out/) {
 }
 print ($i == 24 ? "ok 25\n" : "not ok 25\n");
 
+{
+    # test r of n permutation
+    my %expected = map { $_ => 1 } qw/2_1 1_2 3_2 2_3 3_1 1_3/;
+    my $p = Algorithm::Permute->new([1..3], 2);
+    print ($p ? "ok 26\n" : "not ok 26\n");
+
+    my $found;
+    while (my @r = $p->next) {
+        $found = delete $expected{join('_', @r)};
+        break unless $found;
+    }
+    if (not $found or keys(%expected)) {
+        print "not ok 27\n";
+    } else {
+        print "ok 27\n";
+    }
+}
 
 ######################
 # test for memory leak
 
 $^O !~ /linux/ || !$ENV{MEMORY_TEST} and do {
-    for (26..27) { print "skipping $_: memory leak test\n" }
+    for (28..32) { print "skipping $_: memory leak test\n" }
     exit 0;
 };
 
+# OO interface memory leak test
 for ($i = 0;  $i < 10000;  $i++) {
     $perm->reset;
     while (@res = $perm->next) { }
@@ -118,7 +135,7 @@ for ($i = 0;  $i < 10000;  $i++) {
         !$ok or $ok = check_mem();
     }
 }
-print $ok ? '' : 'not ', "ok 26\n";
+print $ok ? '' : 'not ', "ok 28\n";
 
 for ($i = 0;  $i < 10000;  $i++) {
     @array = ('A'..'E');
@@ -131,8 +148,50 @@ for ($i = 0;  $i < 10000;  $i++) {
         !$ok or $ok = check_mem();
     }
 }
-print $ok ? '' : 'not ', "ok 27\n";
+print $ok ? '' : 'not ', "ok 29\n";
 
+for ($i = 0;  $i < 10000;  $i++) {
+    @array = ('A'..'E');
+    eval { permute { die } @array };
+
+    if ($i == 0) {
+        $ok = check_mem(1);     # initialize
+    }
+    elsif ($i % 100  ==  99) {
+        !$ok or $ok = check_mem();
+    }
+}
+print $ok ? '' : 'not ', "ok 30\n";
+
+{
+    # test A::P destructor
+    for ($i = 0;  $i < 10000;  $i++) {
+        my $p = Algorithm::Permute->new([1..4]);
+        while (@res = $p->next) { }
+        if ($i == 0) {
+            $ok = check_mem(1);     # initialize
+        }
+        elsif ($i % 100  ==  99) {
+            !$ok or $ok = check_mem();
+        }
+    }
+    print $ok ? '' : 'not ', "ok 31\n";
+}
+
+{
+    # test A::P destructor, r of n permutation
+    for ($i = 0;  $i < 10000;  $i++) {
+        my $p = Algorithm::Permute->new([1..4], 3);
+        while (@res = $p->next) { }
+        if ($i == 0) {
+            $ok = check_mem(1);     # initialize
+        }
+        elsif ($i % 100  ==  99) {
+            !$ok or $ok = check_mem();
+        }
+    }
+    print $ok ? '' : 'not ', "ok 32\n";
+}
 
 my $c;
 package TieTest;
@@ -160,13 +219,15 @@ sub check_mem {
         }
         close FH;
 
+        print("# Mem Total: $mem{Total} $units, Resident: $mem{Resident} $units\n")
+            if $ENV{MEMORY_TEST} > 1;
+
         if ($TOTALMEM != $mem{Total}) {
             warn("LEAK! : ", $mem{Total} - $TOTALMEM, " $units\n") unless $initialise;
             $TOTALMEM = $mem{Total};
             return $initialise ? 1 : 0;
         }
 
-        print("# Mem Total: $mem{Total} $units, Resident: $mem{Resident} $units\n");
         return 1;
     }
 }

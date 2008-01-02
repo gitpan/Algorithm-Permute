@@ -1,7 +1,7 @@
 /* 
    Permute.xs
 
-   Copyright (c) 1999 - 2007  Edwin Pratomo
+   Copyright (c) 1999 - 2008  Edwin Pratomo
 
    You may distribute under the terms of either the GNU General Public
    License or the Artistic License, as specified in the Perl README file,
@@ -17,6 +17,7 @@ extern "C" {
 #include "perl.h"
 #include "XSUB.h"
 #include <stdio.h>
+#include "coolex.h"
 #ifdef __cplusplus
 }
 #endif
@@ -74,7 +75,7 @@ my_cxinc(pTHX)
 #if PERL_VERSION >= 9
 #  define AvARRAY_set(av, val) ((av)->sv_u.svu_array) = val
 #else
-#  define AvARRAY_set(av, val) ((XPVAV*)  SvANY(av))->xav_array = (char*) val
+#  define AvARRAY_set(av, val) ((XPVAV*) SvANY(av))->xav_array = (char*) val
 #endif
 
 typedef unsigned int  UINT;
@@ -86,10 +87,11 @@ typedef struct {
     UINT *loc;
     UINT *p;
     IV num;
+    COMBINATION *c;
 } Permute;
 
 /* private _next */
-void _next(int n, UINT *p, UINT *loc, bool *is_done)
+static void _next(int n, UINT *p, UINT *loc, bool *is_done)
 {   
     int i;
     if (n > 1)
@@ -110,6 +112,7 @@ void _next(int n, UINT *p, UINT *loc, bool *is_done)
     else
         *is_done = TRUE;
 }
+
 
 /* permute_engine() and afp_destructor() are from Robin Houston
  * <robin@kitsite.com> */
@@ -180,12 +183,14 @@ MODULE = Algorithm::Permute     PACKAGE = Algorithm::Permute
 PROTOTYPES: DISABLE
 
 Permute* 
-new(CLASS, av)
+new(CLASS, av, ...)
     char *CLASS
     AV *av
     PREINIT:
     IV i, num;
-
+    COMBINATION *c;
+    IV r, n;
+    
     CODE:
     RETVAL = (Permute*) safemalloc(sizeof(Permute));
     if (RETVAL == NULL) {
@@ -194,8 +199,33 @@ new(CLASS, av)
     }
 
     RETVAL->is_done = FALSE;
-    if ((num = av_len(av) + 1) == 0) 
+    if ((n = av_len(av) + 1) == 0) 
         XSRETURN_UNDEF;
+
+    /* init combination if necessary */
+    if (items > 2) {
+    	r = SvIV(ST(2));
+    	if (r > n) {
+    	    warn("Number of combination must be less or equal the number of elements");
+    	    XSRETURN_UNDEF;
+    	}
+    	if (r < n) {
+        	c = init_combination(n, r, av);
+        	/* PerlIO_stdoutf("passed init_combination()\n"); */
+        	if (c == NULL) {
+        		warn("Unable to initialize combination");
+        		XSRETURN_UNDEF;
+        	}
+        	RETVAL->c = c;
+        	num = r;
+        } else {
+            RETVAL->c = NULL;
+            num = n;
+        }
+    } else {
+    	RETVAL->c = NULL;
+    	num = n;
+    }
 
     if ((RETVAL->items = (SV**) safemalloc(sizeof(SV*) * (num + 1))) == NULL)
         XSRETURN_UNDEF;
@@ -205,11 +235,19 @@ new(CLASS, av)
         XSRETURN_UNDEF;
 
     RETVAL->num = num;
-
+    /* initialize items, p, and loc */
     for (i = 1; i <= num; i++) {
-        *(RETVAL->items + i) = av_shift(av);
+        if (RETVAL->c) {
+            *(RETVAL->items + i) = &PL_sv_undef;
+        } else {
+            *(RETVAL->items + i) = av_shift(av);
+        }
         *(RETVAL->p + i) = num - i + 1;
         *(RETVAL->loc + i) = 1;     
+    }
+    if (RETVAL->c) {
+        coolex(RETVAL->c);
+        coolex_visit(RETVAL->c, RETVAL->items + 1); /* base of items is 1 */
     }
 
     OUTPUT:
@@ -224,8 +262,23 @@ next(self)
     IV i;
 
     PPCODE:
-    if (self->is_done) 
+    if (self->is_done && self->c) { /* permutation done */
+    	self->is_done = coolex(self->c); /* generate next combination */
+    	/* reset self->p and self->loc */
+    	/* and update self->items */
+        for (i = 1; i <= self->num; i++) {
+            *(self->p + i) = self->num - i + 1;
+            *(self->loc + i) = 1;
+        }
+        coolex_visit(self->c, self->items + 1);
+    }
+    if (self->is_done) { /* done permutation for all combination */
+        if (self->c) {
+            free_combination(self->c);
+            self->c = NULL;
+        }
         XSRETURN_EMPTY;
+    }
     else {
         EXTEND(sp, self->num);  
         for (i = 1; i <= self->num; i++) {
@@ -251,9 +304,15 @@ next(self)
 void
 DESTROY(self)
     Permute *self
+    PREINIT:
+    int i;
     CODE:
     safefree(self->p); /* must free elements first? */
     safefree(self->loc); 
+    for (i = 1; i <= self->num; i++) { /* leakproof! */
+        SvREFCNT_dec(*(self->items + i));
+    }
+    safefree(self->items);
     safefree(self);
 
 void 

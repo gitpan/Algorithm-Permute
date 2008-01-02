@@ -1,6 +1,6 @@
 #   Permute.pm
 #
-#   Copyright (c) 1999 - 2007 Edwin Pratomo
+#   Copyright (c) 1999 - 2008 Edwin Pratomo
 #
 #   You may distribute under the terms of either the GNU General Public
 #   License or the Artistic License, as specified in the Perl README file,
@@ -23,7 +23,7 @@ require AutoLoader;
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
 
-$VERSION = '0.08';
+$VERSION = '0.09';
 
 bootstrap Algorithm::Permute $VERSION;
 
@@ -42,11 +42,17 @@ Algorithm::Permute - Handy and fast permutation with object oriented interface
 
   use Algorithm::Permute;
 
+  # default is to create n of n objects permutation generator
   my $p = new Algorithm::Permute(['a'..'d']);
+
+  # but also you can create r of n objects permutation generator, where r <= n
+  my $p = new Algorithm::Permute([1..4], 3);
+
   while (@res = $p->next) {
     print join(", ", @res), "\n";
   }
 
+  # and this one is the speed demon:
   my @array = (1..9);
   Algorithm::Permute::permute { print "@array\n" } @array;
 
@@ -54,10 +60,7 @@ Algorithm::Permute - Handy and fast permutation with object oriented interface
 
 This handy module makes performing permutation in Perl easy and fast, 
 although perhaps its algorithm is not the fastest on the earth. 
-Currently it only supports permutation n of n objects. 
-
-No exported functions. This version is not backward compatible with the
-previous one, version 0.01. The old interface is no longer supported.
+It supports permutation r of n objects where 0 < r <= n. 
 
 =head1 METHODS
 

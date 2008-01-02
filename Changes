@@ -1,8 +1,17 @@
 Revision history for Perl extension Algorithm::Permute.
 
+0.09  Jan 2 2008
+    - Added test for die() inside permutation block
+    - Added memory leak tests for A::P destructor
+    - New feature: permutation r of n objects. Combination
+      is implemented using coolex algorithm
+    - Updated docs to reflect this feature
+    - Fixed memory leak in A::P destructor
+
 0.08  Dec 27 2007
-    - Make test #23 work correctly (srezic reported crashes on 
-      amd64-freebsd-6.2)
+    - Make it pass test #23 (srezic reported crashes on 
+      amd64-freebsd-6.2). Thanks to Yoga Eko P for free login to 
+      freebsd machine.
 
 0.07  Dec 26 2007
     - Make it work with perl-5.10.0 (RT ticket #27022)

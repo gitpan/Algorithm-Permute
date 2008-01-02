@@ -5,6 +5,8 @@ Permute.pm
 Permute.xs
 test.pl
 typemap
+coolex.c
+coolex.h
 bench/t
 bench/8result.txt
 bench/9result.txt
