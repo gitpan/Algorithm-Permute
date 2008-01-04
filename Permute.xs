@@ -17,7 +17,7 @@ extern "C" {
 #include "perl.h"
 #include "XSUB.h"
 #include <stdio.h>
-#include "coolex.h"
+#include "coollex.h"
 #ifdef __cplusplus
 }
 #endif
@@ -81,36 +81,71 @@ my_cxinc(pTHX)
 typedef unsigned int  UINT;
 typedef unsigned long ULONG;
 
+#ifdef USE_LINKEDLIST
+typedef struct record {
+   int info;
+   struct record *link;
+} listrecord;
+#endif
+
 typedef struct {
     bool is_done;
     SV **items;
-    UINT *loc;
+    UV num;
+#ifdef USE_LINKEDLIST
+    listrecord *ptr_head, **ptr, **pred;
+#else
+    UINT *loc; /* location of n in p[] */
     UINT *p;
-    IV num;
+#endif
     COMBINATION *c;
 } Permute;
 
 /* private _next */
-static void _next(int n, UINT *p, UINT *loc, bool *is_done)
-{   
+#ifdef USE_LINKEDLIST
+static bool _next(UV n, listrecord *ptr_head, listrecord **ptr, listrecord **pred)
+#else
+static bool _next(UV n, UINT *p, UINT *loc)
+#endif
+{
+#ifndef USE_LINKEDLIST
     int i;
-    if (n > 1)
-        if (loc[n] < n)
-        {
-            p[loc[n]] = p[loc[n] + 1];
-            p[loc[n] + 1] = n;
-            loc[n] = loc[n] + 1;
-        }
-        else
-        {
-            _next(n - 1, p, loc, is_done);
-            for (i = n - 1; i >= 1; i--)
-                p[i + 1] = p[i];
-            p[1] = n;
-            loc[n] = 1;
-        }
-    else
-        *is_done = TRUE;
+#endif
+    bool is_done = FALSE;
+
+    if (n <= 1) /* termination condition */
+        return TRUE;
+
+#ifdef USE_LINKEDLIST
+    /* less arithmetic */
+    if (ptr[n]->link != NULL) {
+        pred[n]->link = ptr[n]->link;
+        pred[n] = pred[n]->link;
+        ptr[n]->link = pred[n]->link;
+        pred[n]->link = ptr[n];
+    } else {
+        pred[n]->link = NULL;
+        is_done = _next(n - 1, ptr_head, ptr, pred);
+        ptr[n]->link = ptr_head->link;
+        ptr_head->link = ptr[n]; /* change head of list */
+        pred[n] = ptr_head;
+    }
+#else
+    if (loc[n] < n) {
+        /* swap adjacent */
+        p[loc[n]] = p[loc[n] + 1];
+        p[++loc[n]] = n;
+    } else {
+        is_done = _next(n - 1, p, loc);
+        /* then shift right */
+        for (i = n - 1; i >= 1; i--)
+            p[i + 1] = p[i];
+        /* adjust both extremes */
+        p[1] = n;
+        loc[n] = 1;
+    }
+#endif
+    return is_done;
 }
 
 
@@ -122,30 +157,30 @@ SV** array,
 I32 level, 
 I32 len, SV*** tmparea, OP* callback)
 {
-	SV** copy    = tmparea[level];
-	int  index   = level;
-	bool calling = (index + 1 == len);
-	SV*  tmp;
-	
-	Copy(array, copy, len, SV*);
-	
-	if (calling)
-	    AvARRAY_set(av, copy);
+    SV** copy    = tmparea[level];
+    int  index   = level;
+    bool calling = (index + 1 == len);
+    SV*  tmp;
+    
+    Copy(array, copy, len, SV*);
+    
+    if (calling)
+        AvARRAY_set(av, copy);
 
-	do {
-		if (calling) {
-		    PL_op = callback;
-		    CALLRUNOPS(aTHX);
-		}
-		else {
-		    permute_engine(av, copy, level + 1, len, tmparea, callback);
-		}
-		if (index != 0) {
-			tmp = copy[index];
-			copy[index] = copy[index - 1];
-			copy[index - 1] = tmp;
-		}
-	} while (index-- > 0);
+    do {
+        if (calling) {
+            PL_op = callback;
+            CALLRUNOPS(aTHX);
+        }
+        else {
+            permute_engine(av, copy, level + 1, len, tmparea, callback);
+        }
+        if (index != 0) {
+            tmp = copy[index];
+            copy[index] = copy[index - 1];
+            copy[index - 1] = tmp;
+        }
+    } while (index-- > 0);
 }
 
 struct afp_cache {
@@ -187,9 +222,12 @@ new(CLASS, av, ...)
     char *CLASS
     AV *av
     PREINIT:
-    IV i, num;
+    UV i, num;
     COMBINATION *c;
-    IV r, n;
+    UV r, n;
+#ifdef USE_LINKEDLIST
+    listrecord *q; /* temporary holder */
+#endif
     
     CODE:
     RETVAL = (Permute*) safemalloc(sizeof(Permute));
@@ -204,37 +242,53 @@ new(CLASS, av, ...)
 
     /* init combination if necessary */
     if (items > 2) {
-    	r = SvIV(ST(2));
-    	if (r > n) {
-    	    warn("Number of combination must be less or equal the number of elements");
-    	    XSRETURN_UNDEF;
-    	}
-    	if (r < n) {
-        	c = init_combination(n, r, av);
-        	/* PerlIO_stdoutf("passed init_combination()\n"); */
-        	if (c == NULL) {
-        		warn("Unable to initialize combination");
-        		XSRETURN_UNDEF;
-        	}
-        	RETVAL->c = c;
-        	num = r;
+        r = SvUV(ST(2));
+        if (r > n) {
+            warn("Number of combination must be less or equal the number of elements");
+            XSRETURN_UNDEF;
+        }
+        if (r < n) {
+            c = init_combination(n, r, av);
+            /* PerlIO_stdoutf("passed init_combination()\n"); */
+            if (c == NULL) {
+                warn("Unable to initialize combination");
+                XSRETURN_UNDEF;
+            }
+            RETVAL->c = c;
+            num = r;
         } else {
             RETVAL->c = NULL;
             num = n;
         }
     } else {
-    	RETVAL->c = NULL;
-    	num = n;
+        RETVAL->c = NULL;
+        num = n;
     }
+
+    RETVAL->num = num;
 
     if ((RETVAL->items = (SV**) safemalloc(sizeof(SV*) * (num + 1))) == NULL)
         XSRETURN_UNDEF;
-    if ((RETVAL->p = (UINT*) safemalloc(sizeof(UINT) * (num + 1))) == NULL)
+#ifdef USE_LINKEDLIST
+    RETVAL->ptr_head = safemalloc(sizeof(listrecord));
+    if (RETVAL->ptr_head == NULL)
         XSRETURN_UNDEF;
-    if ((RETVAL->loc = (UINT*) safemalloc(sizeof(UINT) * (num + 1))) == NULL)
+    q = RETVAL->ptr_head;
+    RETVAL->ptr  = safemalloc(sizeof(listrecord*) * (num + 1));
+    if (RETVAL->ptr == NULL)
         XSRETURN_UNDEF;
+    RETVAL->pred = safemalloc(sizeof(listrecord*) * (num + 1));
+    if (RETVAL->pred == NULL)
+        XSRETURN_UNDEF;
+#else
+    RETVAL->p = (UINT*) safemalloc(sizeof(UINT) * (num + 1));
+    if (RETVAL->p == NULL)
+        XSRETURN_UNDEF;
+    RETVAL->loc = (UINT*) safemalloc(sizeof(UINT) * (num + 1));
+    if (RETVAL->loc == NULL)
+        XSRETURN_UNDEF;
+#endif
 
-    RETVAL->num = num;
     /* initialize items, p, and loc */
     for (i = 1; i <= num; i++) {
         if (RETVAL->c) {
@@ -242,12 +296,27 @@ new(CLASS, av, ...)
         } else {
             *(RETVAL->items + i) = av_shift(av);
         }
+#ifdef USE_LINKEDLIST
+        q->link = safemalloc(sizeof(listrecord));
+        if (q->link == NULL)
+            XSRETURN_UNDEF;
+        q = q->link;
+
+        q->info = num - i + 1;
+        RETVAL->ptr[q->info] = q;
+        RETVAL->pred[i] = RETVAL->ptr_head; /* all predecessors point to ptr_head */
+#else
         *(RETVAL->p + i) = num - i + 1;
-        *(RETVAL->loc + i) = 1;     
+        *(RETVAL->loc + i) = 1;
+#endif
     }
+#ifdef USE_LINKEDLIST
+    q->link = NULL; /* the tail of list points to NULL */
+#endif
+
     if (RETVAL->c) {
-        coolex(RETVAL->c);
-        coolex_visit(RETVAL->c, RETVAL->items + 1); /* base of items is 1 */
+        coollex(RETVAL->c);
+        coollex_visit(RETVAL->c, RETVAL->items + 1); /* base of items is 1 */
     }
 
     OUTPUT:
@@ -256,21 +325,32 @@ new(CLASS, av, ...)
 void
 next(self)
     Permute *self
-
     PREINIT:
-    IV n;
-    IV i;
-
+    int i;
+#ifdef USE_LINKEDLIST
+    listrecord *q; /* temporary holder */
+#endif
     PPCODE:
     if (self->is_done && self->c) { /* permutation done */
-    	self->is_done = coolex(self->c); /* generate next combination */
-    	/* reset self->p and self->loc */
-    	/* and update self->items */
+        self->is_done = coollex(self->c); /* generate next combination */
+#ifdef USE_LINKEDLIST
+        q = self->ptr_head;
+        for (i = 1; i <= self->num; i++) {
+            q = q->link;
+            q->info = self->num - i + 1;
+            self->pred[i] = self->ptr_head;
+        }
+        /* q->link = NULL; */ 
+        assert(q->link == NULL); /* should point to NULL */
+#else
+        /* reset self->p and self->loc */
         for (i = 1; i <= self->num; i++) {
             *(self->p + i) = self->num - i + 1;
             *(self->loc + i) = 1;
         }
-        coolex_visit(self->c, self->items + 1);
+#endif
+        /* and update self->items */
+        coollex_visit(self->c, self->items + 1);
     }
     if (self->is_done) { /* done permutation for all combination */
         if (self->c) {
@@ -281,24 +361,20 @@ next(self)
     }
     else {
         EXTEND(sp, self->num);  
+#ifdef USE_LINKEDLIST
+        q = self->ptr_head->link;
+        while (q) {
+            PUSHs(sv_2mortal(newSVsv(*(self->items + q->info))));
+            /* PerlIO_stdoutf("%d\n", q->info); */
+            q = q->link;
+        }
+        self->is_done = _next(self->num, self->ptr_head, self->ptr, self->pred);
+#else
         for (i = 1; i <= self->num; i++) {
             PUSHs(sv_2mortal(newSVsv(*(self->items + *(self->p + i)))));
         }
-        n = self->num;
-        if (*(self->loc + n) < n)
-        {
-            *(self->p + *(self->loc + n)) = *(self->p + *(self->loc + n) + 1);
-            *(self->p + *(self->loc + n) + 1) = n;
-            *(self->loc + n) = *(self->loc + n) + 1;
-        }
-        else
-        {
-            _next(n - 1, self->p, self->loc, &(self->is_done));
-            for (i = n - 1; i >= 1; i--)
-                *(self->p + i + 1) = *(self->p + i);
-            *(self->p + 1) = n;
-            *(self->loc + n) = 1;
-        }
+        self->is_done = _next(self->num, self->p, self->loc);
+#endif
     }
 
 void
@@ -306,12 +382,28 @@ DESTROY(self)
     Permute *self
     PREINIT:
     int i;
+#ifdef USE_LINKEDLIST
+    listrecord *q;
+#endif
     CODE:
+#ifdef USE_LINKEDLIST
+    q = self->ptr_head;
+    for (i = 1; i <= self->num; i++) {
+        safefree(self->ptr[i]);
+        /* No need to deallocate this, in fact, it would be disaster */
+        /* safefree(self->pred[i]); */
+        SvREFCNT_dec(*(self->items + i));
+    }
+    safefree(self->ptr);
+    safefree(self->pred);
+    safefree(self->ptr_head);
+#else
     safefree(self->p); /* must free elements first? */
     safefree(self->loc); 
     for (i = 1; i <= self->num; i++) { /* leakproof! */
         SvREFCNT_dec(*(self->items + i));
     }
+#endif
     safefree(self->items);
     safefree(self);
 
@@ -319,25 +411,50 @@ void
 peek(self)
     Permute *self
     PREINIT:
+#ifdef USE_LINKEDLIST
+    listrecord *q;
+#else
     int i;
+#endif
     PPCODE: 
     if (self->is_done) 
         XSRETURN_EMPTY;
     EXTEND(sp, self->num);
+#ifdef USE_LINKEDLIST
+    q = self->ptr_head->link;
+    while (q) {
+        PUSHs(sv_2mortal(newSVsv(*(self->items + q->info))));
+        q = q->link;
+    }
+#else
     for (i = 1; i <= self->num; i++)
         PUSHs(sv_2mortal(newSVsv(*(self->items + *(self->p + i)))));
+#endif
 
 void
 reset(self)
     Permute *self
     PREINIT:
     int i;
+#ifdef USE_LINKEDLIST
+    listrecord *q;
+#endif
     CODE:
     self->is_done = FALSE;
+#ifdef USE_LINKEDLIST
+    q = self->ptr_head;
+    for (i = 1; i <= self->num; i++) {
+        q = q->link;
+        q->info = self->num - i + 1;
+        self->pred[i] = self->ptr_head;
+    }
+    assert(q->link == NULL);
+#else
     for (i = 1; i <= self->num; i++) {
         *(self->p + i) = self->num - i + 1;
         *(self->loc + i) = 1;     
     }
+#endif
 
 void
 permute(callback_sv, array_sv)
@@ -346,15 +463,15 @@ SV* array_sv;
   PROTOTYPE: &\@
   PREINIT:
     CV*           callback;
-	GV*			  agv;
+    GV*           agv;
     I32           x;
     PERL_CONTEXT* cx;
     I32           gimme = G_VOID;  /* We call our callback in VOID context */
 
     bool          old_catch;
     struct afp_cache *c;
-	I32 hasargs = 0;
-	SV** newsp;
+    I32 hasargs = 0;
+    SV** newsp;
   PPCODE:
 {
     if (!SvROK(callback_sv) || SvTYPE(SvRV(callback_sv)) != SVt_PVCV)
@@ -367,8 +484,8 @@ SV* array_sv;
     c->array    = (AV*)SvRV(array_sv);
     c->len      = 1 + av_len(c->array);
     
-	agv = gv_fetchpv("A", TRUE, SVt_PVAV);
-	SAVESPTR(GvSV(agv));
+    agv = gv_fetchpv("A", TRUE, SVt_PVAV);
+    SAVESPTR(GvSV(agv));
 
     if (SvREADONLY(c->array))
         Perl_croak(aTHX_ "Can't permute a read-only array");
@@ -408,16 +525,16 @@ SV* array_sv;
     SAVESPTR(CvROOT(callback)->op_ppaddr);
     CvROOT(callback)->op_ppaddr = PL_ppaddr[OP_NULL];  /* Zap the OP_LEAVESUB */
 #ifdef PAD_SET_CUR
-   	PAD_SET_CUR(CvPADLIST(callback),1);
+    PAD_SET_CUR(CvPADLIST(callback),1);
 #else
-   	SAVESPTR(PL_curpad);
-   	PL_curpad = AvARRAY((AV*)AvARRAY(CvPADLIST(callback))[1]);
+    SAVESPTR(PL_curpad);
+    PL_curpad = AvARRAY((AV*)AvARRAY(CvPADLIST(callback))[1]);
 #endif
     SAVETMPS;
     SAVESPTR(PL_op);
 
     PUSHBLOCK(cx, CXt_NULL, SP);  /* make a pseudo block */
-	PUSHSUB(cx);
+    PUSHSUB(cx);
 
     old_catch = CATCH_GET;
     CATCH_SET(TRUE);
@@ -426,6 +543,6 @@ SV* array_sv;
     permute_engine(c->array, AvARRAY(c->array), 0, c->len, 
         c->tmparea, CvSTART(callback));
     
-	POPBLOCK(cx,PL_curpm);
+    POPBLOCK(cx,PL_curpm);
     CATCH_SET(old_catch);
 }

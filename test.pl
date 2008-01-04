@@ -106,7 +106,9 @@ print ($i == 24 ? "ok 25\n" : "not ok 25\n");
 
     my $found;
     while (my @r = $p->next) {
-        $found = delete $expected{join('_', @r)};
+        my $key = join('_', @r);
+        # print "key: $key\n";
+        $found = delete $expected{$key};
         break unless $found;
     }
     if (not $found or keys(%expected)) {

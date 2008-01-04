@@ -8,7 +8,7 @@
 
 */
 
-#include "coolex.h"
+#include "coollex.h"
 
 COMBINATION* init_combination(IV n, IV r, AV *av) {
     COMBINATION *c = NULL;
@@ -43,8 +43,8 @@ void free_combination(COMBINATION *c) {
     safefree(c);
 }
 
-/* coolex algorithm */
-bool coolex(COMBINATION *c) {
+/* coollex algorithm */
+bool coollex(COMBINATION *c) {
     static int x = 1, y = 0;
     bool is_done = FALSE;
     
@@ -77,7 +77,7 @@ bool coolex(COMBINATION *c) {
     return is_done;
 }
 
-void coolex_visit(COMBINATION *c, SV **p_items) {
+void coollex_visit(COMBINATION *c, SV **p_items) {
     int i, r = 0;
     SV **p, **svp;
     AV *av = (AV*)SvRV(c->aryref);

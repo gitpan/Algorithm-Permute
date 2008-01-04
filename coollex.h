@@ -24,8 +24,8 @@ typedef struct {
 
 COMBINATION* init_combination(IV n, IV r, AV *av);
 void free_combination(COMBINATION *c);
-/* coolex pseudo-coroutine */
-bool coolex(COMBINATION *c);
-void coolex_visit(COMBINATION *c, SV **p_items);
+/* coollex pseudo-coroutine */
+bool coollex(COMBINATION *c);
+void coollex_visit(COMBINATION *c, SV **p_items);
 
 #endif

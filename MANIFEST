@@ -1,3 +1,4 @@
+README
 Changes
 Makefile.PL
 MANIFEST
@@ -5,11 +6,7 @@ Permute.pm
 Permute.xs
 test.pl
 typemap
-coolex.c
-coolex.h
-bench/t
-bench/8result.txt
-bench/9result.txt
-bench/Permutations.pm
-bench/mjd_permute
+coollex.c
+coollex.h
+bench/benchmark.pl
 META.yml                                Module meta-data in YAML

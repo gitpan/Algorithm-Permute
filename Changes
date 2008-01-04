@@ -1,5 +1,11 @@
 Revision history for Perl extension Algorithm::Permute.
 
+0.11  Jan 4 2008
+    - Added alternative implementation of the algorithm (enable it using
+      -DUSE_LINKEDLIST)
+    - Added comprehensive benchmarks script, thus replacing the old 
+      stuffs inside bench directory
+
 0.10  Jan 2 2008
     - Fixed memory error when cleaning up combination struct on Win32
     - Fixed compile error when using MSVC6
