@@ -10,6 +10,6 @@ WriteMakefile(
     'DEFINE'	    => '-DPERL_EXT',     # e.g., '-DHAVE_SOMETHING' 
     'INC'	        => '',     # e.g., '-I/usr/include/other' 
     'OBJECT'        => 'coollex.o Permute.o',
-    'CCFLAGS'       => '-Wall -fno-strict-aliasing',
+    'CCFLAGS'       => $Config{ccflags}, # '-Wall -fno-strict-aliasing',
     %optionals,
 );

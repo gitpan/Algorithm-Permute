@@ -1,5 +1,8 @@
 Revision history for Perl extension Algorithm::Permute.
 
+0.12  Apr 23 2008
+    - Maintenance release. Bugfix #35288.
+
 0.11  Jan 4 2008
     - Added alternative implementation of the algorithm (enable it using
       -DUSE_LINKEDLIST)

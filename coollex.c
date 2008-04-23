@@ -34,6 +34,8 @@ COMBINATION* init_combination(IV n, IV r, AV *av) {
     c->aryref = aryref;
     c->b = b;
     c->state = 0;
+    c->x = 1;
+    c->y = 0;
     return c;
 }
 
@@ -45,7 +47,6 @@ void free_combination(COMBINATION *c) {
 
 /* coollex algorithm */
 bool coollex(COMBINATION *c) {
-    static int x = 1, y = 0;
     bool is_done = FALSE;
     
     switch (c->state) {
@@ -59,18 +60,16 @@ bool coollex(COMBINATION *c) {
             break;
         default: /* subsequent shifts */
         {
-            while (x < c->n - 1) {
-                c->b[x++] = 0;
-                c->b[y++] = 1;
-                if (c->b[x] == 0) {
-                    c->b[x] = 1, c->b[0] = 0;
-                    if (y > 1) x = 1;
-                    y = 0;
+            while (c->x < c->n - 1) {
+                c->b[c->x++] = 0;
+                c->b[c->y++] = 1;
+                if (c->b[c->x] == 0) {
+                    c->b[c->x] = 1, c->b[0] = 0;
+                    if (c->y > 1) c->x = 1;
+                    c->y = 0;
                 }
                 return is_done;
             }
-            /* reset x and y */
-            x = 1, y = 0;
             is_done = TRUE;
         }
     }    

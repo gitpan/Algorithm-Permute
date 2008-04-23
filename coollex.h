@@ -15,11 +15,13 @@
 #include "XSUB.h"
 
 typedef struct {
-	IV 	            n;
-	IV              r;
-	SV              *aryref;
+    IV 	            n;
+    IV              r;
+    SV              *aryref;
     unsigned char   *b;             /* bitstring: array of bytes */
-	int             state;          /* state 0 / 1 / 2 */
+    int             state;          /* state 0 / 1 / 2 */
+    int             x;
+    int             y;
 } COMBINATION;
 
 COMBINATION* init_combination(IV n, IV r, AV *av);
